@@ -221,9 +221,7 @@ jobs:
         run: |
           ROCKSPEC_FILE="dist/nika-${{ steps.luarocks_meta.outputs.rock_version }}.rockspec"
           luarocks pack "$ROCKSPEC_FILE"
-          SRC_ROCK="nika-${{ steps.luarocks_meta.outputs.rock_version }}.src.rock"
           luarocks upload --api-key="$LUAROCKS_API_KEY" "$ROCKSPEC_FILE"
-          luarocks upload --api-key="$LUAROCKS_API_KEY" "$SRC_ROCK"
 
       - name: Release ja existente
         if: ${{ steps.existing_release.outputs.exists == 'true' }}
