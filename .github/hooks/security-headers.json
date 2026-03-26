@@ -1,0 +1,11 @@
+{
+    "hooks": {
+        "SessionStart": [
+            {
+                "type": "command",
+                "windows": "powershell -NoProfile -ExecutionPolicy Bypass -File ./.github/hooks/scripts/security-headers-context.ps1",
+                "timeout": 10
+            }
+        ]
+    }
+}

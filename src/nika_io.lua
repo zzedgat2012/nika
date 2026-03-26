@@ -1,0 +1,80 @@
+local M = {}
+
+local function copy_table(input)
+    local out = {}
+    if type(input) ~= "table" then
+        return out
+    end
+    for k, v in pairs(input) do
+        out[k] = v
+    end
+    return out
+end
+
+local function readonly(table_value)
+    local frozen = {}
+    for k, v in pairs(table_value) do
+        if type(v) == "table" then
+            frozen[k] = readonly(copy_table(v))
+        else
+            frozen[k] = v
+        end
+    end
+
+    return setmetatable({}, {
+        __index = frozen,
+        __newindex = function(_, key)
+            error("Request e somente leitura: " .. tostring(key), 2)
+        end,
+        __pairs = function()
+            return pairs(frozen)
+        end
+    })
+end
+
+local function normalize_method(method)
+    if type(method) ~= "string" or method == "" then
+        return "GET"
+    end
+    return string.upper(method)
+end
+
+local function normalize_path(path)
+    if type(path) ~= "string" or path == "" then
+        return "/"
+    end
+    return path
+end
+
+function M.new_request(raw)
+    local source = raw or {}
+
+    local req = {
+        method = normalize_method(source.method),
+        path = normalize_path(source.path),
+        query = copy_table(source.query),
+        body = source.body,
+        headers = copy_table(source.headers),
+        params = copy_table(source.params)
+    }
+
+    return readonly(req)
+end
+
+function M.new_response(raw)
+    local source = raw or {}
+
+    local res = {
+        status = tonumber(source.status) or 200,
+        headers = copy_table(source.headers),
+        body = source.body == nil and "" or tostring(source.body)
+    }
+
+    if res.headers["Content-Type"] == nil then
+        res.headers["Content-Type"] = "text/html; charset=utf-8"
+    end
+
+    return res
+end
+
+return M
