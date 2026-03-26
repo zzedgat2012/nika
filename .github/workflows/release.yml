@@ -69,7 +69,24 @@ jobs:
         run: |
           TAG="${{ steps.tag.outputs.tag }}"
           VERSION_NO_V="${TAG#v}"
-          ROCK_VERSION="${VERSION_NO_V}-1"
+
+          # LuaRocks rockspec version must match: [%w.]+-%d+
+          # For pre-release semver, convert:
+          #   0.0.1-alpha.1 -> 0.0.1.pre.alpha.1-1
+          VERSION_NO_BUILD="${VERSION_NO_V%%+*}"
+          CORE="${VERSION_NO_BUILD%%-*}"
+
+          if [[ "$VERSION_NO_BUILD" == *-* ]]; then
+            PRE="${VERSION_NO_BUILD#*-}"
+            PRE="$(echo "$PRE" | sed -E 's/[^A-Za-z0-9.]+/./g; s/\.+/./g; s/^\.|\.$//g')"
+            ROCK_BASE="${CORE}.pre.${PRE}"
+          else
+            ROCK_BASE="$CORE"
+          fi
+
+          ROCK_BASE="$(echo "$ROCK_BASE" | sed -E 's/[^A-Za-z0-9.]+/./g; s/\.+/./g; s/^\.|\.$//g')"
+          ROCK_VERSION="${ROCK_BASE}-1"
+
           echo "version_no_v=$VERSION_NO_V" >> "$GITHUB_OUTPUT"
           echo "rock_version=$ROCK_VERSION" >> "$GITHUB_OUTPUT"
 
