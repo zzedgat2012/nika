@@ -17,6 +17,11 @@ on:
         required: false
         default: true
         type: boolean
+      publish_luarocks:
+        description: "Publicar pacote no LuaRocks"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -56,6 +61,16 @@ jobs:
             TAG="v$VERSION"
           fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Resolver versao LuaRocks
+        id: luarocks_meta
+        shell: bash
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          VERSION_NO_V="${TAG#v}"
+          ROCK_VERSION="${VERSION_NO_V}-1"
+          echo "version_no_v=$VERSION_NO_V" >> "$GITHUB_OUTPUT"
+          echo "rock_version=$ROCK_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Verificar se tag ja existe
         id: tag_check
@@ -103,6 +118,17 @@ jobs:
               throw err;
             }
 
+      - name: Validar secret LuaRocks
+        if: ${{ inputs.publish_luarocks == true && steps.existing_release.outputs.exists != 'true' }}
+        shell: bash
+        env:
+          LUAROCKS_API_KEY: ${{ secrets.LUAROCKS_API_KEY }}
+        run: |
+          if [ -z "$LUAROCKS_API_KEY" ]; then
+            echo "Secret LUAROCKS_API_KEY nao configurado no repositorio."
+            exit 1
+          fi
+
       - name: Gerar pacotes da release
         if: ${{ steps.existing_release.outputs.exists != 'true' }}
         shell: bash
@@ -122,6 +148,62 @@ jobs:
           files: |
             dist/*.zip
             dist/*.tar.gz
+
+      - name: Instalar LuaRocks
+        if: ${{ inputs.publish_luarocks == true && steps.existing_release.outputs.exists != 'true' }}
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y luarocks lua5.4
+
+      - name: Gerar rockspec
+        if: ${{ inputs.publish_luarocks == true && steps.existing_release.outputs.exists != 'true' }}
+        shell: bash
+        run: |
+          ROCK_VERSION="${{ steps.luarocks_meta.outputs.rock_version }}"
+          cat > "dist/nika-${ROCK_VERSION}.rockspec" <<EOF
+          package = "nika"
+          version = "${ROCK_VERSION}"
+          source = {
+            url = "git+https://github.com/${{ github.repository }}.git",
+            tag = "${{ steps.tag.outputs.tag }}"
+          }
+          description = {
+            summary = "Nika: framework web minimalista em Lua",
+            homepage = "https://github.com/${{ github.repository }}",
+            license = "BSD-3-Clause"
+          }
+          dependencies = {
+            "lua >= 5.1"
+          }
+          build = {
+            type = "builtin",
+            modules = {
+              nika = "src/nika.lua",
+              nika_io = "src/nika_io.lua",
+              nika_audit = "src/nika_audit.lua",
+              router = "src/router.lua",
+              parser = "src/parser.lua",
+              sandbox = "src/sandbox.lua",
+              hooks = "src/hooks.lua",
+              db = "src/db.lua",
+              adapter_cgi = "src/adapter_cgi.lua",
+              ["hooks.security_headers"] = "hooks/security_headers.lua"
+            }
+          }
+          EOF
+
+      - name: Empacotar e publicar no LuaRocks
+        if: ${{ inputs.publish_luarocks == true && steps.existing_release.outputs.exists != 'true' }}
+        shell: bash
+        env:
+          LUAROCKS_API_KEY: ${{ secrets.LUAROCKS_API_KEY }}
+        run: |
+          ROCKSPEC_FILE="dist/nika-${{ steps.luarocks_meta.outputs.rock_version }}.rockspec"
+          luarocks pack "$ROCKSPEC_FILE"
+          SRC_ROCK="nika-${{ steps.luarocks_meta.outputs.rock_version }}.src.rock"
+          luarocks upload --api-key="$LUAROCKS_API_KEY" "$ROCKSPEC_FILE"
+          luarocks upload --api-key="$LUAROCKS_API_KEY" "$SRC_ROCK"
 
       - name: Release ja existente
         if: ${{ steps.existing_release.outputs.exists == 'true' }}
