@@ -31,7 +31,8 @@ local function emit_security(on_security, message, context)
 end
 
 local function is_registry(candidate)
-    return type(candidate) == "table" and candidate.__nika_template_fn_registry == true and type(candidate.functions) == "table"
+    return type(candidate) == "table" and candidate.__nika_template_fn_registry == true and
+    type(candidate.functions) == "table"
 end
 
 local function add_function(out, name, fn, on_security)

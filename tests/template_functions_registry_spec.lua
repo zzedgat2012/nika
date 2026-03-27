@@ -48,9 +48,10 @@ describe("Template functions registry (Fase 8.1)", function()
         end)
         assert.is_true(ok)
 
-        local rendered, render_err = compile_and_render("<p><%= trim(Request.query.value) %></p>", { value = "  nika  " }, {
-            template_functions = registry
-        })
+        local rendered, render_err = compile_and_render("<p><%= trim(Request.query.value) %></p>", { value = "  nika  " },
+            {
+                template_functions = registry
+            })
 
         assert.is_nil(render_err)
         assert.is_not_nil(rendered)

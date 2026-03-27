@@ -73,7 +73,8 @@ describe("Template text mode (Fase 8.3)", function()
         assert.is_not_nil(js_rendered)
         assert.is_not_nil(js_rendered:find('";alert%(1%);//'))
 
-        local css_rendered, css_err = compile_and_render("<style>.x{background:url('<%= Request.query.value %>')}</style>", {
+        local css_rendered, css_err = compile_and_render(
+        "<style>.x{background:url('<%= Request.query.value %>')}</style>", {
             value = "javascript:alert(1)"
         }, {
             template_mode = "text"
