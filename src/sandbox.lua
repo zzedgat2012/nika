@@ -7,6 +7,7 @@ local escape_context = require("escape_context")
 local template_functions = require("template_functions")
 local template_partials = require("template_partials")
 local parser = require("parser")
+local has_context_store, context_store = pcall(require, "context_store")  -- Phase 10
 
 local FORBIDDEN = {
     _G = true,
@@ -24,6 +25,7 @@ local FORBIDDEN = {
 local RESERVED_ENV = {
     Request = true,
     Response = true,
+    Context = true,  -- Phase 10: request-scoped context (read-only)
     escape = true,
     write = true,
     __nika_emit = true,
@@ -37,7 +39,7 @@ local RESERVED_ENV = {
     ipairs = true,
     tonumber = true,
     tostring = true,
-    type = true,
+    type = type,
     table = true
 }
 
@@ -185,6 +187,11 @@ function M.build_env(req, res, escape_fn, api, fn_registry, partials, opts)
             concat = table.concat
         }
     }
+
+    -- Phase 10: Adiciona Context (read-only) se context_store disponível e context_id fornecido
+    if has_context_store and context_store and req and req.context_id then
+        env.Context = context_store.make_readonly_api(req.context_id)
+    end
 
     local ok_functions, functions_err = add_template_functions(env, fn_registry, api)
     if not ok_functions then

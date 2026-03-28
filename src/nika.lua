@@ -4,6 +4,12 @@ local parser = require("parser")
 local sandbox = require("sandbox")
 local hooks = require("hooks")
 
+-- Phase 10: Novos módulos para Gin-style routing
+local context_store = require("context_store")
+local middleware_chain = require("middleware_chain")
+local router_v2 = require("router_v2")
+local route_group = require("route_group")
+
 local has_audit, audit = pcall(require, "nika_audit")
 
 local M = {}
@@ -129,6 +135,46 @@ function M.handle_request(raw_req, opts)
     end
 
     return res
+end
+
+-- Phase 10: API para Gin-style routing
+-- Cria novo router explícito (Fase 10)
+function M.router()
+    return router_v2
+end
+
+-- Cria novo grupo de rotas (Fase 10)
+function M.group(prefix)
+    return route_group.new(prefix, router_v2, middleware_chain)
+end
+
+-- Registra middleware global (Fase 10)
+function M.use(middleware_fn, name, priority)
+    return middleware_chain.use("before_request", middleware_fn, name, priority)
+end
+
+-- Cria novo contexto request-scoped (Fase 10)
+function M.create_context(request_id)
+    return context_store.create_context(request_id)
+end
+
+-- Limpa contextos pendentes (Fase 10)
+function M.cleanup_contexts()
+    return context_store.cleanup_all_pending()
+end
+
+-- Debug: retorna informações do router
+function M.debug_routes()
+    return router_v2.debug_routes()
+end
+
+-- Debug: retorna informações de middlewares
+function M.debug_middlewares()
+    local result = {}
+    for _, stage in ipairs({"before_request", "before_render", "after_request"}) do
+        result[stage] = middleware_chain.get_middleware_list(stage)
+    end
+    return result
 end
 
 return M

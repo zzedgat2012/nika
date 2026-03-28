@@ -55,7 +55,8 @@ function M.new_request(raw)
         query = copy_table(source.query),
         body = source.body,
         headers = copy_table(source.headers),
-        params = copy_table(source.params)
+        params = copy_table(source.params),
+        context_id = source.context_id or nil  -- Phase 10: request-scoped context ID
     }
 
     return readonly(req)
