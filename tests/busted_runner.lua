@@ -30,7 +30,10 @@ local SPEC_MODULES = {
     -- Phase 13: Error handling
     "tests.error_formatter_spec",
     "tests.error_handler_spec",
-    "tests.nika_error_flow_spec"
+    "tests.nika_error_flow_spec",
+    -- Phase 13 Block 3: Robustness
+    "tests.nika_middleware_error_flow_spec",
+    "tests.nika_stress_errors_spec"
 }
 
 local function run_suite(suite)
