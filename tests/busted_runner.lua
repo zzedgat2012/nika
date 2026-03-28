@@ -13,7 +13,17 @@ local SPEC_MODULES = {
     "tests.context_store_spec",
     "tests.middleware_chain_spec",
     "tests.router_v2_spec",
-    "tests.route_group_spec"
+    "tests.route_group_spec",
+    -- Phase 11: Dataware ORM + Auto-CRUD
+    "tests.dataware_spec",
+    "tests.query_builder_spec",
+    "tests.auto_crud_spec",
+    -- Phase 12: File upload foundation
+    "tests.multipart_spec",
+    "tests.file_validator_spec",
+    "tests.file_storage_spec",
+    "tests.file_manager_spec",
+    "tests.adapter_cgi_multipart_spec"
 }
 
 local function run_suite(suite)

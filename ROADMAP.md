@@ -7,7 +7,8 @@ Construir um framework web Lua minimalista e auditável, mantendo sintaxe ASP em
 - ✅ Fases 1 a 5 concluídas (MVP funcional e publicado).
 - ✅ Suite de integração e regressão de segurança ativa.
 - ✅ Pipeline de release (GitHub Release + pacote LuaRocks) configurado.
-- ⏳ Próxima frente: paridade comportamental 1:1 de template engine (Go-inspired).
+- ✅ Fases 6 a 10 concluídas (template engine + core routing/middleware).
+- 🔄 Em andamento: Fase 11 (REST Dataware ORM + Auto-CRUD) e Fase 12 (File Uploads + Multipart Parsing).
 
 ---
 
@@ -103,7 +104,7 @@ Objetivo: concluir meta de paridade comportamental.
 ---
 
 ## Marco Atual
-MVP estável concluído. Fase 9 concluída com equivalência (9.1), pentest final (9.2) e selo de conformidade (9.3). Próxima execução técnica: **Migração para Gin-style router + REST Dataware ORM** (Fases 10-14).
+MVP estável concluído. Fase 9 concluída com equivalência (9.1), pentest final (9.2) e selo de conformidade (9.3). Fase 10 concluída com router explícito, context store request-scoped, middleware chain e route groups, com suíte verde em `lua tests/run_all.lua`. Próxima execução técnica: **Fase 11 — REST Dataware ORM + Auto-CRUD**.
 
 ---
 
@@ -124,7 +125,7 @@ Evoluir Nika de um micro-framework template-centric para um **framework web mini
 
 ---
 
-## Fase 10: Core Routing + Middleware Context (Semanas 1-2) — 🔄 In Progress
+## Fase 10: Core Routing + Middleware Context (Semanas 1-2) — ✅ Concluída
 
 **Objetivo:** Foundation para rota com parâmetros, grupos, método HTTP, e context local request-scoped.
 
@@ -153,10 +154,10 @@ Evoluir Nika de um micro-framework template-centric para um **framework web mini
 
 | Arquivo | Responsabilidade | Status |
 |---------|------------------|--------|
-| `src/router_v2.lua` | Router explícito com suporte para `:param`, regex, método HTTP | ⏳ |
-| `src/context_store.lua` | Isolamento request-scoped via UUID; sandbox-safe; cleanup automático | ⏳ |
-| `src/middleware_chain.lua` | Sequenciador de middlewares com prioridade; backward compat com `hooks.lua` | ⏳ |
-| `src/route_group.lua` | Namespace de rotas (`/api/v1`); middleware scoping por grupo | ⏳ |
+| `src/router_v2.lua` | Router explícito com suporte para `:param`, regex, método HTTP | ✅ |
+| `src/context_store.lua` | Isolamento request-scoped via UUID; sandbox-safe; cleanup automático | ✅ |
+| `src/middleware_chain.lua` | Sequenciador de middlewares com prioridade; backward compat com `hooks.lua` | ✅ |
+| `src/route_group.lua` | Namespace de rotas (`/api/v1`); middleware scoping por grupo | ✅ |
 
 ### Modificações em Arquivos Existentes
 
@@ -198,17 +199,17 @@ end)
 
 ### Definition of Done
 
-- [ ] Router compila `/users/:id`, `/posts/:id/comments/:cid`, regex `/articles/[0-9]{4}` sem erro
-- [ ] Parâmetros extraídos: `/users/123` → `req.params = {id = "123"}`
-- [ ] Método HTTP descriminado: `GET /users` ≠ `POST /users`
-- [ ] `context.set(key, val)` sobrevive middleware chain; limpo após response
-- [ ] Backward compat com file-system routing **deprecated** (logs avisam migração até Fase 12)
-- [ ] Testes: `test_router_v2_spec.lua`, `test_context_store_spec.lua`
-- [ ] ISO 27001: Context store não vaza dados entre requisições
+- [x] Router compila `/users/:id`, `/posts/:id/comments/:cid`, regex `/articles/[0-9]{4}` sem erro
+- [x] Parâmetros extraídos: `/users/123` → `req.params = {id = "123"}`
+- [x] Método HTTP descriminado: `GET /users` ≠ `POST /users`
+- [x] `context.set(key, val)` sobrevive middleware chain; limpo após response
+- [x] Backward compat com file-system routing **deprecated** (logs avisam migração até Fase 12)
+- [x] Testes: `tests/router_v2_spec.lua`, `tests/context_store_spec.lua`, `tests/middleware_chain_spec.lua`, `tests/route_group_spec.lua`
+- [x] ISO 27001: Context store não vaza dados entre requisições
 
 ---
 
-## Fase 11: REST Dataware ORM + Auto-CRUD (Semanas 3-4) — 🔄 Planned
+## Fase 11: REST Dataware ORM + Auto-CRUD (Semanas 3-4) — 🔄 In Progress
 
 **Objetivo:** ORM Lua nativo com query builder fluente + gerador automático de rotas CRUD.
 
@@ -239,11 +240,11 @@ end)
 
 | Arquivo | Responsabilidade | Status |
 |---------|------------------|--------|
-| `src/dataware.lua` | Model registry + schema DSL | ⏳ |
-| `src/query_builder.lua` | Fluent API: `find()`, `create()`, `where()`, `select()`, `order_by()`, `limit()`, `join()` | ⏳ |
-| `src/auto_crud.lua` | Generator: Model → 5 rotas CRUD (List, Get, Create, Update, Delete) | ⏳ |
-| `src/dataware_audit.lua` | Log automático INSERT/UPDATE/DELETE com user_id, timestamp | ⏳ |
-| `src/dataware_tenancy.lua` | Middleware: auto-inject `tenant_id` em todas queries | ⏳ |
+| `src/dataware.lua` | Model registry + schema DSL | 🔄 |
+| `src/query_builder.lua` | Fluent API: `find()`, `create()`, `where()`, `select()`, `order_by()`, `limit()`, `join()` | 🔄 |
+| `src/auto_crud.lua` | Generator: Model → 5 rotas CRUD (List, Get, Create, Update, Delete) | 🔄 |
+| `src/dataware_audit.lua` | Log automático INSERT/UPDATE/DELETE com user_id, timestamp | 🔄 |
+| `src/dataware_tenancy.lua` | Middleware: auto-inject `tenant_id` em todas queries | 🔄 |
 
 ### Sintaxe Nova (Nika)
 
@@ -301,7 +302,7 @@ local posts = User:find(1):with("posts"):first()
 
 ---
 
-## Fase 12: File Uploads + Multipart Parsing (Semanas 5-6) — 🔄 Planned
+## Fase 12: File Uploads + Multipart Parsing (Semanas 5-6) — 🔄 In Progress
 
 **Objetivo:** Suporte completo a upload de arquivos com validação MIME, size check, armazenamento plugável.
 
@@ -331,8 +332,8 @@ local posts = User:find(1):with("posts"):first()
 | Arquivo | Responsabilidade | Status |
 |---------|------------------|--------|
 | `src/multipart.lua` | Parser streaming multipart/form-data | ⏳ |
-| `src/file_validator.lua` | MIME whitelist, size limits, extension sanitize | ⏳ |
-| `src/file_storage.lua` | Interface plugável (File, S3, GCS) | ⏳ |
+| `src/file_validator.lua` | MIME whitelist, size limits, extension sanitize | 🔄 |
+| `src/file_storage.lua` | Interface plugável (File, S3, GCS) | 🔄 |
 | `src/file_manager.lua` | Wrapper: upload(), validate(), store(), cleanup() | ⏳ |
 
 ### Sintaxe Nova (Nika)
@@ -569,8 +570,8 @@ Fase 10 (Router + Context)
 
 ## Próximas Ações Imediatas (Sprint 0)
 
-- [ ] Iniciar implementação Fase 10 (router_v2.lua + context_store.lua)
-- [ ] Criar testes estruturais para validação incremental
-- [ ] Documentar migration guide para preparar transição FS → Gin
-- [ ] Configurar CI/CD para rodar testes a cada commit
-- [ ] Audit ISO 27001 para Fase 10 antes de merge
+- [ ] Iniciar implementação Fase 11 (dataware.lua + query_builder.lua + auto_crud.lua)
+- [ ] Definir schema DSL e contrato mínimo de Model Registry
+- [ ] Criar testes estruturais para QueryBuilder e Auto-CRUD
+- [ ] Documentar migration guide FS → Gin (release note da Fase 10)
+- [ ] Audit ISO 27001 para Fase 11 antes de merge

@@ -9,6 +9,7 @@ local context_store = require("context_store")
 local middleware_chain = require("middleware_chain")
 local router_v2 = require("router_v2")
 local route_group = require("route_group")
+local dataware = require("dataware")
 
 local has_audit, audit = pcall(require, "nika_audit")
 
@@ -175,6 +176,23 @@ function M.debug_middlewares()
         result[stage] = middleware_chain.get_middleware_list(stage)
     end
     return result
+end
+
+-- Phase 11: model registry (REST Dataware)
+function M.model(name)
+    return dataware.model(name)
+end
+
+function M.get_model(name)
+    return dataware.get(name)
+end
+
+function M.list_models()
+    return dataware.list()
+end
+
+function M.clear_models()
+    return dataware.clear()
 end
 
 return M
