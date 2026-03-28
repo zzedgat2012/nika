@@ -103,4 +103,474 @@ Objetivo: concluir meta de paridade comportamental.
 ---
 
 ## Marco Atual
-MVP estável concluído. Fase 9 concluída com equivalência (9.1), pentest final (9.2) e selo de conformidade (9.3). Próxima execução técnica: **Ciclo de manutenção e monitoramento contínuo**.
+MVP estável concluído. Fase 9 concluída com equivalência (9.1), pentest final (9.2) e selo de conformidade (9.3). Próxima execução técnica: **Migração para Gin-style router + REST Dataware ORM** (Fases 10-14).
+
+---
+
+# PRÓXIMA FRENTE: Framework Maduro — Gin + REST Dataware (3+ meses)
+
+## Visão Estratégica
+
+Evoluir Nika de um micro-framework template-centric para um **framework web minimalista completo**, inspirado no Gin (Go) e integrado nativamente com **REST Dataware** para abstração de dados agnóstica. Objetivos:
+
+1. **Roteamento explícito** (`:id`, regex, método HTTP) substituindo file-system routing
+2. **Middlewares estruturados** com contexto local request-scoped
+3. **ORM nativo Lua** (REST Dataware) com auto-CRUD generator e query builder fluente
+4. **File uploads** com validação MIME + multipart parsing
+5. **Tratamento centralizado de erros** + route grouping
+6. **Validação + binding** automáticos + security middleware nativa (CORS, CSRF, rate-limit)
+
+**Timeline:** 5 fases sequenciais (Fases 10-14), ~10 semanas, cada uma com ISO 27001 audit.
+
+---
+
+## Fase 10: Core Routing + Middleware Context (Semanas 1-2) — 🔄 In Progress
+
+**Objetivo:** Foundation para rota com parâmetros, grupos, método HTTP, e context local request-scoped.
+
+### Arquitetura
+
+```
+         /users/:id
+             ↓
+    ┌─────────────────────┐
+    │  router.compile()   │ Regex compile: /users/(\d+)
+    │  pattern → syntax   │
+    └────────┬────────────┘
+             ↓
+    ┌─────────────────────┐
+    │  route.resolve()    │ Match: /users/123 → params = {id = "123"}
+    │  /:id → { id }      │
+    └────────┬────────────┘
+             ↓
+    ┌─────────────────────┐
+    │  middleware chain   │ before_request → handler → after_request
+    │  + context_store    │ context.set("user_id", 123)
+    └─────────────────────┘
+```
+
+### Componentes Novos
+
+| Arquivo | Responsabilidade | Status |
+|---------|------------------|--------|
+| `src/router_v2.lua` | Router explícito com suporte para `:param`, regex, método HTTP | ⏳ |
+| `src/context_store.lua` | Isolamento request-scoped via UUID; sandbox-safe; cleanup automático | ⏳ |
+| `src/middleware_chain.lua` | Sequenciador de middlewares com prioridade; backward compat com `hooks.lua` | ⏳ |
+| `src/route_group.lua` | Namespace de rotas (`/api/v1`); middleware scoping por grupo | ⏳ |
+
+### Modificações em Arquivos Existentes
+
+| Arquivo | Mudança |
+|---------|---------|
+| `src/nika.lua` | Integrar `router_v2`, deprecate FS resolver com warning logs |
+| `src/hooks.lua` | Manter compatibilidade; delegar para `middleware_chain` |
+| `src/nika_io.lua` | Adicionar `req.params`, `req.context` binding |
+| `src/sandbox.lua` | Estender _ENV com read-only `context_store` access |
+
+### Sintaxe Nova (Nika)
+
+```lua
+-- Novo router explícito
+local router = nika.router()
+
+-- Rotas com parâmetros
+router.get("/users/:id", function(req, res)
+  local user_id = req.params.id
+  return res.json({id = user_id})
+end)
+
+router.post("/users", function(req, res)
+  return res.status(201).json({created = true})
+end)
+
+-- Route groups para namespacing
+local api_v1 = router.group("/api/v1")
+api_v1.get("/posts/:id", function(req, res)
+  return res.json({post_id = req.params.id})
+end)
+
+-- Middleware com contexto local
+router:use(function(req, res, context)
+  context.set("user_id", 123)
+  context.set("roles", {"admin"})
+end)
+```
+
+### Definition of Done
+
+- [ ] Router compila `/users/:id`, `/posts/:id/comments/:cid`, regex `/articles/[0-9]{4}` sem erro
+- [ ] Parâmetros extraídos: `/users/123` → `req.params = {id = "123"}`
+- [ ] Método HTTP descriminado: `GET /users` ≠ `POST /users`
+- [ ] `context.set(key, val)` sobrevive middleware chain; limpo após response
+- [ ] Backward compat com file-system routing **deprecated** (logs avisam migração até Fase 12)
+- [ ] Testes: `test_router_v2_spec.lua`, `test_context_store_spec.lua`
+- [ ] ISO 27001: Context store não vaza dados entre requisições
+
+---
+
+## Fase 11: REST Dataware ORM + Auto-CRUD (Semanas 3-4) — 🔄 Planned
+
+**Objetivo:** ORM Lua nativo com query builder fluente + gerador automático de rotas CRUD.
+
+### Arquitetura
+
+```
+    ┌──────────────────────────┐
+    │   nika.model('User')     │ Registry de modelos + schema
+    └──────────┬───────────────┘
+               ↓
+    ┌──────────────────────────┐
+    │   QueryBuilder (Lua)     │ Fluent: find(), create(), update()
+    │   .where(), .select()    │ + pagination, sort, eager load
+    └──────────┬───────────────┘
+               ↓
+    ┌──────────────────────────┐
+    │   Database Adapter       │ Prepared statement wrapper
+    │   (SQLite, Postgres...)  │
+    └──────────┬───────────────┘
+               ↓
+    ┌──────────────────────────┐
+    │   Audit + Multi-tenancy  │ tenant_id filter automático
+    │  (log CRUD operations)   │
+    └──────────────────────────┘
+```
+
+### Componentes Novos
+
+| Arquivo | Responsabilidade | Status |
+|---------|------------------|--------|
+| `src/dataware.lua` | Model registry + schema DSL | ⏳ |
+| `src/query_builder.lua` | Fluent API: `find()`, `create()`, `where()`, `select()`, `order_by()`, `limit()`, `join()` | ⏳ |
+| `src/auto_crud.lua` | Generator: Model → 5 rotas CRUD (List, Get, Create, Update, Delete) | ⏳ |
+| `src/dataware_audit.lua` | Log automático INSERT/UPDATE/DELETE com user_id, timestamp | ⏳ |
+| `src/dataware_tenancy.lua` | Middleware: auto-inject `tenant_id` em todas queries | ⏳ |
+
+### Sintaxe Nova (Nika)
+
+```lua
+-- Definir modelo
+local User = nika.model('User')
+  :schema({
+    id = "integer|pk",
+    name = "string",
+    email = "email",
+    created_at = "datetime"
+  })
+  :table("users")
+
+-- Query flourente
+local active_users = User:find()
+  :where("active", "=", true)
+  :order_by("created_at", "desc")
+  :limit(10)
+  :all()
+
+local user = User:find(123):first()
+
+-- Create
+User:create({name = "John", email = "john@example.com"})
+
+-- Update
+User:find(123):update({name = "Jane"})
+
+-- Delete
+User:find(123):delete()
+
+-- Relacionamentos (eager load)
+local posts = User:find(1):with("posts"):first()
+
+-- Auto-CRUD routes geradas
+-- GET    /api/users              (list com paginação)
+-- GET    /api/users/:id          (get um)
+-- POST   /api/users              (create)
+-- PUT    /api/users/:id          (update)
+-- DELETE /api/users/:id          (delete)
+```
+
+### Definition of Done
+
+- [ ] Define modelo com schema DSL; compila sem erro
+- [ ] CRUD routes geradas automaticamente (5 rotas)
+- [ ] Query builder funciona: `User:find():where(...):select(...):first()`
+- [ ] Relacionamentos (eager load): `User:find(1):with("posts")`
+- [ ] Audit: logs registram CREATE, UPDATE, DELETE com user_id, timestamp
+- [ ] Multi-tenancy: middleware auto-injeta `tenant_id`; query sem tenant retorna erro
+- [ ] Paginação: `list, total = User:find():paginate(page=1, per_page=10)`
+- [ ] Testes: `test_dataware_spec.lua`, `test_auto_crud_spec.lua`
+- [ ] ISO 27001: QueryBuilder usa prepared statements; tenant_id validado
+
+---
+
+## Fase 12: File Uploads + Multipart Parsing (Semanas 5-6) — 🔄 Planned
+
+**Objetivo:** Suporte completo a upload de arquivos com validação MIME, size check, armazenamento plugável.
+
+### Arquitetura
+
+```
+    ┌─────────────────────┐
+    │  multipart.parse()  │ Content-Type: multipart/form-data
+    └────────┬────────────┘
+             ↓
+    ┌─────────────────────┐
+    │  file validator     │ MIME type, size, extension whitelist
+    └────────┬────────────┘
+             ↓
+    ┌─────────────────────┐
+    │  storage strategy   │ /uploads, S3 plugin, GCS plugin
+    │  (plugável)         │
+    └────────┬────────────┘
+             ↓
+    ┌─────────────────────┐
+    │  req.files registry │ Acesso em handler/templates
+    └─────────────────────┘
+```
+
+### Componentes Novos
+
+| Arquivo | Responsabilidade | Status |
+|---------|------------------|--------|
+| `src/multipart.lua` | Parser streaming multipart/form-data | ⏳ |
+| `src/file_validator.lua` | MIME whitelist, size limits, extension sanitize | ⏳ |
+| `src/file_storage.lua` | Interface plugável (File, S3, GCS) | ⏳ |
+| `src/file_manager.lua` | Wrapper: upload(), validate(), store(), cleanup() | ⏳ |
+
+### Sintaxe Nova (Nika)
+
+```lua
+-- Handler com upload
+router.post("/api/documents", function(req, res)
+  local files = req.files
+  local form = req.form_data
+  
+  if not file_validator.is_whitelisted(files[1].content_type) then
+    return res.status(400).json({error = "MIME not allowed"})
+  end
+  
+  local path = file_manager.store(files[1], {
+    dir = "/uploads/documents",
+    max_size = "100MB",
+    allowed_mime = {"application/pdf", "image/jpeg"}
+  })
+  
+  return res.status(200).json({path = path})
+end)
+```
+
+### Definition of Done
+
+- [ ] Parse multipart com N fields + N files
+- [ ] Extrai: `req.files[0].filename`, `.content_type`, `.data`
+- [ ] Validação: rejeita MIME não-whitelist (ex: .exe)
+- [ ] File size limit: rejeita > 100MB
+- [ ] Armazena em `/uploads/uuid/filename`; retorna caminho relativo
+- [ ] Cleanup: remove arquivos temporários após resposta
+- [ ] Erro handling: 413 Payload Too Large, 400 Bad Request
+- [ ] Testes: `test_multipart_spec.lua`, `test_file_validator_spec.lua`
+- [ ] ISO 27001: Filenames sanitizados; MIME verificado; path traversal bloqueado
+
+---
+
+## Fase 13: Error Handling + Route Grouping (Semanas 7-8) — 🔄 Planned
+
+**Objetivo:** Error handler centralizado, route grouping com middleware scope, versionamento API.
+
+### Arquitetura
+
+```
+    ┌──────────────────────────┐
+    │  error handler (global)  │ Catch 4xx, 5xx; custom response
+    └──────────┬───────────────┘
+               ↓
+    ┌──────────────────────────┐
+    │  route_group             │ Prefix + middleware scope
+    │  /api/v1                 │
+    └──────────┬───────────────┘
+               ↓
+    ┌──────────────────────────┐
+    │  Resultado              │ /api/v1/users/:id com error handling
+    │  versioning, fallback   │
+    └──────────────────────────┘
+```
+
+### Componentes Novos
+
+| Arquivo | Responsabilidade | Status |
+|---------|------------------|--------|
+| `src/error_handler.lua` | Centralizador com custom formatters (JSON, HTML, XML) | ⏳ |
+| `src/error_formatter.lua` | JSON, XML, HTML; stack trace only in dev | ⏳ |
+
+### Sintaxe Nova (Nika)
+
+```lua
+-- Error handler global
+nika.set_error_handler(function(err, context)
+  if err.status == 401 then
+    return {status = 401, body = json({error = "Unauthorized"})}
+  elseif err.status == 404 then
+    return {status = 404, body = json({error = "Not Found"})}
+  else
+    local msg = os.getenv("ENV") == "prod" and "Internal Error" or err.message
+    return {status = 500, body = json({error = msg})}
+  end
+end)
+
+-- Route groups com middleware
+local api_v1 = router.group("/api/v1")
+api_v1:use(auth_middleware)
+api_v1:use(rate_limit_middleware)
+api_v1.get("/users/:id", get_user_handler)
+
+local api_v2 = router.group("/api/v2")
+api_v2.get("/users/:id", get_user_v2_handler)
+```
+
+### Definition of Done
+
+- [ ] Error handler centralizado captura 4xx, 5xx
+- [ ] Custom formatters: JSON, HTML, XML
+- [ ] Stack trace hidden in prod; dev mostra completo
+- [ ] Route groups com prefix correto: `/api/v1/users/:id`
+- [ ] Middleware por grupo (não herda global)
+- [ ] Error handler responde com Content-Negotiation (Accept header)
+- [ ] Testes: `test_error_handler_spec.lua`, `test_route_group_spec.lua`
+- [ ] ISO 27001: Stack trace nunca exposto em produção
+
+---
+
+## Fase 14: Validation + Binding + Security Middleware (Semanas 9-10) — 🔄 Planned
+
+**Objetivo:** Request validation, JSON/form binding, CORS/CSRF/rate-limit nativos.
+
+### Arquitetura
+
+```
+    ┌──────────────────────────┐
+    │  schema validator        │ JSON schema, form schema
+    │  (input guards)          │
+    └──────────┬───────────────┘
+               ↓
+    ┌──────────────────────────┐
+    │  binder (JSON, form)     │ Auto-map request → Lua table
+    └──────────┬───────────────┘
+               ↓
+    ┌──────────────────────────┐
+    │  Security middlewares    │ CORS, CSRF, rate-limit
+    └──────────────────────────┘
+```
+
+### Componentes Novos
+
+| Arquivo | Responsabilidade | Status |
+|---------|------------------|--------|
+| `src/validator.lua` | JSON schema, form schema, custom rules | ⏳ |
+| `src/binder.lua` | JSON → Lua table; form data → Lua table | ⏳ |
+| `src/middleware_cors.lua` | CORS headers (Access-Control-Allow-*) | ⏳ |
+| `src/middleware_csrf.lua` | CSRF token generation + validation | ⏳ |
+| `src/middleware_ratelimit.lua` | Token bucket per-IP/per-user | ⏳ |
+
+### Sintaxe Nova (Nika)
+
+```lua
+-- Schema validator
+local UserCreateSchema = validator.schema({
+  name = "string|required|min:3|max:100",
+  email = "email|required",
+  age = "integer|optional|min:18"
+})
+
+-- Handler com validação + binding
+router.post("/api/users", function(req, res)
+  local user_data, errors = req.validate_and_bind(UserCreateSchema)
+  if errors then
+    return res.status(400).json({errors = errors})
+  end
+  
+  local user = User:create(user_data)
+  return res.status(201).json(user)
+end)
+
+-- Security middleware
+router:use(middleware_cors({
+  allowed_origins = {"https://app.example.com"},
+  allowed_methods = {"GET", "POST", "PUT", "DELETE"},
+  allowed_headers = {"Content-Type", "Authorization"}
+}))
+
+router:use(middleware_csrf())
+router:use(middleware_ratelimit({
+  window = 60,
+  max_requests = 100,
+  retry_after_header = true
+}))
+```
+
+### Definition of Done
+
+- [ ] Schema validator rejeita payload inválido com mensagens claras
+- [ ] Binder: JSON/form → Lua table automático
+- [ ] CORS: preflight (OPTIONS) respondido; origin validation
+- [ ] CSRF: token não previsível; validação em POST/PUT/DELETE
+- [ ] Rate-limit: per-IP enforced; 429 com Retry-After
+- [ ] Testes: `test_validator_spec.lua`, `test_binder_spec.lua`, `test_security_middleware_spec.lua`
+- [ ] ISO 27001: Validator rejeita payloads > 1MB; CSRF imprevisível; rate-limit evita brute force
+
+---
+
+## Backward Compatibility & Migration Path
+
+| Fase | Ação |
+|------|------|
+| **Fase 10 launch** | File-system routing em modo "deprecated"; warning logs |
+| **Fim Fase 11** | Release migration guide com exemplos de refactor FS → Gin |
+| **Fim Fase 12** | (Opcional) Deprecation warning mais forte |
+| **v2.0 release** | File-system routing removido; Gin-style obrigatório |
+
+---
+
+## Reuso de Componentes Existentes
+
+| Arquivo | Uso Atual | Integração Proposta |
+|---------|-----------|-------------------|
+| [src/router.lua](src/router.lua) | FS routing | Deprecate; manter resolver_404 |
+| [src/hooks.lua](src/hooks.lua) | 3-stage hooks | Migrar para `middleware_chain` (compat) |
+| [src/nika_io.lua](src/nika_io.lua) | Abstração req/res | Adicionar `req.params`, `req.files`, context binding |
+| [src/db.lua](src/db.lua) | Prepared statements | Base para `query_builder`; reuse driver interface |
+| [src/sandbox.lua](src/sandbox.lua) | Isolamento template | Estender _ENV com `context_store` (read-only) |
+| [src/nika_audit.lua](src/nika_audit.lua) | Log segurança | Reuse para audit CRUD + error handling |
+| [src/adapter_cgi.lua](src/adapter_cgi.lua) | CGI I/O | Chamar `multipart.parse()` em Content-Type check |
+
+---
+
+## Verificação Não Regressão (Contínua)
+
+1. **Compatibilidade:** Templates `.nika` existentes renderizam sem quebra
+2. **Segurança:** Sandbox _ENV intacto; escaping contextual preservado
+3. **Auditoria:** Logs de segurança + erro continuam funcionando
+4. **Performance:** Sem degradação vs MVP atual
+5. **ISO 27001:** Cada fase auditada antes de integração
+
+---
+
+## Dependencies & Parallelization
+
+```
+Fase 10 (Router + Context) 
+    ├─→ Fase 11 (ORM + Auto-CRUD)
+    │   ├─→ Fase 12 (File Upload) [parallelizable com Fase 11]
+    │   └─→ Fase 13 (Error + Grouping)
+    │       └─→ Fase 14 (Validation + Security)
+    └─→ Testes contínuos + audit ISO 27001
+```
+
+**Possível paralelização:** Fases 11 + 12 podem iniciar em paralelo após Fase 10, mas Fase 13 + 14 devem aguardar Fases 11 + 12.
+
+---
+
+## Próximas Ações Imediatas (Sprint 0)
+
+- [ ] Iniciar implementação Fase 10 (router_v2.lua + context_store.lua)
+- [ ] Criar testes estruturais para validação incremental
+- [ ] Documentar migration guide para preparar transição FS → Gin
+- [ ] Configurar CI/CD para rodar testes a cada commit
+- [ ] Audit ISO 27001 para Fase 10 antes de merge
