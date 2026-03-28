@@ -10,6 +10,7 @@ Construir um framework web Lua minimalista e auditável, mantendo sintaxe ASP em
 - ✅ Fases 6 a 10 concluídas (template engine + core routing/middleware).
 - ✅ Fase 11 (REST Dataware ORM + Auto-CRUD) concluída.
 - ✅ Fase 12 (File Uploads + Multipart Parsing) concluída.
+- 🔄 Fase 13 (Error Handling + Route Grouping) iniciada.
 
 ---
 
@@ -373,7 +374,7 @@ end)
 
 ---
 
-## Fase 13: Error Handling + Route Grouping (Semanas 7-8) — 🔄 Planned
+## Fase 13: Error Handling + Route Grouping (Semanas 7-8) — 🔄 In Progress
 
 **Objetivo:** Error handler centralizado, route grouping com middleware scope, versionamento API.
 
@@ -399,8 +400,8 @@ end)
 
 | Arquivo | Responsabilidade | Status |
 |---------|------------------|--------|
-| `src/error_handler.lua` | Centralizador com custom formatters (JSON, HTML, XML) | ⏳ |
-| `src/error_formatter.lua` | JSON, XML, HTML; stack trace only in dev | ⏳ |
+| `src/error_handler.lua` | Centralizador com custom formatters (JSON, HTML, XML) | 🔄 |
+| `src/error_formatter.lua` | JSON, XML, HTML; stack trace only in dev | 🔄 |
 
 ### Sintaxe Nova (Nika)
 

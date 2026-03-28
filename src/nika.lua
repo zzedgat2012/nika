@@ -11,10 +11,14 @@ local router_v2 = require("router_v2")
 local route_group = require("route_group")
 local dataware = require("dataware")
 local file_manager = require("file_manager")
+local error_handler = require("error_handler")
 
 local has_audit, audit = pcall(require, "nika_audit")
 
 local M = {}
+local configured_error_handler = error_handler.create_default({
+    env = "prod"
+})
 
 local function log_error(message, context)
     if has_audit and audit and type(audit.log_error) == "function" then
@@ -57,6 +61,26 @@ function M.handle_request(raw_req, opts)
 
     local req = io_factory.new_request(raw_req)
     local res = io_factory.new_response(opts.base_response)
+    local active_error_handler = opts.error_handler or configured_error_handler
+
+    local function apply_error(err)
+        local handled = error_handler.apply(active_error_handler, err, {
+            req = req,
+            res = res,
+            opts = opts
+        })
+
+        res.status = tonumber(handled.status) or 500
+        res.headers = res.headers or {}
+
+        local headers = handled.headers or {}
+        for k, v in pairs(headers) do
+            res.headers[k] = v
+        end
+
+        res.body = handled.body == nil and "" or tostring(handled.body)
+        return res
+    end
 
     local function cleanup_uploads()
         local ok_cleanup, cleanup_err = pcall(function()
@@ -100,18 +124,23 @@ function M.handle_request(raw_req, opts)
         })
         if not ok_defaults then
             log_error("Falha ao registrar hooks padrao", { error = tostring(defaults_err) })
-            res.status = 500
-            res.body = "Erro interno."
+            apply_error({
+                status = 500,
+                code = "default_hook_load_error",
+                message = "Internal Error",
+                details = defaults_err
+            })
             return finalize_response(false)
         end
     end
 
     if req.upload_error then
         local status = upload_error_status(req.upload_error)
-        res.json({
-            error = "upload_error",
-            reason = tostring(req.upload_error)
-        }, status)
+        apply_error({
+            status = status,
+            code = "upload_error",
+            message = tostring(req.upload_error)
+        })
         return finalize_response(false)
     end
 
@@ -134,8 +163,12 @@ function M.handle_request(raw_req, opts)
             path = template_path,
             error = tostring(read_err)
         })
-        res.status = 500
-        res.body = "Erro interno."
+        apply_error({
+            status = 500,
+            code = "template_read_error",
+            message = "Internal Error",
+            details = read_err
+        })
         return finalize_response(false)
     end
 
@@ -153,8 +186,12 @@ function M.handle_request(raw_req, opts)
             path = template_path,
             error = tostring(compile_err)
         })
-        res.status = 500
-        res.body = "Erro interno."
+        apply_error({
+            status = 500,
+            code = "template_compile_error",
+            message = "Internal Error",
+            details = compile_err
+        })
         return finalize_response(false)
     end
 
@@ -171,8 +208,12 @@ function M.handle_request(raw_req, opts)
             path = template_path,
             error = tostring(render_err)
         })
-        res.status = 500
-        res.body = "Erro interno."
+        apply_error({
+            status = 500,
+            code = "template_render_error",
+            message = "Internal Error",
+            details = render_err
+        })
         return finalize_response(false)
     end
 
@@ -236,6 +277,21 @@ end
 
 function M.clear_models()
     return dataware.clear()
+end
+
+function M.set_error_handler(handler_fn)
+    if type(handler_fn) ~= "function" then
+        return nil, "error_handler_must_be_function"
+    end
+    configured_error_handler = handler_fn
+    return true
+end
+
+function M.reset_error_handler()
+    configured_error_handler = error_handler.create_default({
+        env = "prod"
+    })
+    return true
 end
 
 return M
