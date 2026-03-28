@@ -11,6 +11,17 @@ local function copy_table(input)
     return out
 end
 
+local function send_json(res, status, payload)
+    if type(res) ~= "table" then
+        return
+    end
+
+    res.status = status
+    res.headers = res.headers or {}
+    res.headers["Content-Type"] = "application/json; charset=utf-8"
+    res.body = json_util.encode(payload)
+end
+
 local function resolve_tenant(req, res, opts)
     local context = {}
     local middleware = opts.tenant_middleware or dataware_tenancy.create_middleware(opts.tenant_extractor)
@@ -26,17 +37,6 @@ local function resolve_tenant(req, res, opts)
     end
 
     return tenant_id, false
-end
-
-local function send_json(res, status, payload)
-    if type(res) ~= "table" then
-        return
-    end
-
-    res.status = status
-    res.headers = res.headers or {}
-    res.headers["Content-Type"] = "application/json; charset=utf-8"
-    res.body = json_util.encode(payload)
 end
 
 local function get_payload(req)

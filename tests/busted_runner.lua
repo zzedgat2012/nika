@@ -23,7 +23,8 @@ local SPEC_MODULES = {
     "tests.file_validator_spec",
     "tests.file_storage_spec",
     "tests.file_manager_spec",
-    "tests.adapter_cgi_multipart_spec"
+    "tests.adapter_cgi_multipart_spec",
+    "tests.nika_upload_flow_spec"
 }
 
 local function run_suite(suite)

@@ -68,6 +68,48 @@ describe("Auto CRUD generator (Phase 11)", function()
         assert.is_true(res.body:find("\"data\"") ~= nil)
     end)
 
+    it("bloqueia middleware customizado sem tenant no context", function()
+        local user = dataware.model("User")
+            :table("users")
+            :tenant("tenant_id")
+
+        auto_crud.generate(user, router_v2, {
+            base_path = "/users",
+            tenant_middleware = function()
+                return false
+            end
+        })
+
+        local handler = router_v2.match("GET", "/users")
+        local res = { status = 200, headers = {}, body = "" }
+        handler({ headers = {}, query = {} }, res)
+
+        assert.are.equal(403, res.status)
+        assert.is_true(res.body:find("tenant_required") ~= nil)
+    end)
+
+    it("respeita short-circuit do middleware de tenant", function()
+        local user = dataware.model("User")
+            :table("users")
+            :tenant("tenant_id")
+
+        auto_crud.generate(user, router_v2, {
+            base_path = "/users",
+            tenant_middleware = function(req, res)
+                res.status = 401
+                res.body = "blocked-by-middleware"
+                return true
+            end
+        })
+
+        local handler = router_v2.match("GET", "/users")
+        local res = { status = 200, headers = {}, body = "" }
+        handler({ headers = {}, query = {} }, res)
+
+        assert.are.equal(401, res.status)
+        assert.are.equal("blocked-by-middleware", res.body)
+    end)
+
     it("retorna 400 em create sem body_table", function()
         local user = dataware.model("User")
             :table("users")

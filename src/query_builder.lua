@@ -37,12 +37,51 @@ end
 local Builder = {}
 Builder.__index = Builder
 
+local function apply_eager_loading(self, rows)
+    if type(rows) ~= "table" or #self._with == 0 then
+        return rows, nil
+    end
+
+    for i = 1, #rows do
+        local row = rows[i]
+        if type(row) == "table" then
+            for j = 1, #self._with do
+                local relation_name = self._with[j]
+                local relation = self._relations[relation_name]
+                if relation then
+                    local local_value = row[relation.local_key]
+                    if local_value == nil then
+                        row[relation_name] = {}
+                    else
+                        local relation_context = { tenant_id = self._tenant_id }
+                        local relation_rows, rel_err = relation.model:find(nil, relation_context)
+                            :where(relation.foreign_key, "=", local_value)
+                            :all()
+                        if not relation_rows then
+                            return nil, "eager_load_failed:" .. relation_name .. ":" .. tostring(rel_err)
+                        end
+
+                        if relation.type == "has_many" then
+                            row[relation_name] = relation_rows
+                        else
+                            row[relation_name] = relation_rows[1]
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return rows, nil
+end
+
 local function collect_where_parts(self)
     local clauses = { "1 = ?" }
     local params = { 1 }
 
     if self._require_tenant then
         if self._tenant_id == nil or self._tenant_id == "" then
+            dataware_audit.log_tenant_violation(self._model_name, "query")
             return nil, nil, "tenant_required"
         end
         clauses[#clauses + 1] = self._tenant_field .. " = ?"
@@ -81,6 +120,26 @@ function Builder:select(...)
     end
 
     self._select = cleaned
+    return self
+end
+
+function Builder:with(...)
+    local args = { ... }
+    if #args == 0 then
+        return self
+    end
+
+    for i = 1, #args do
+        local name = args[i]
+        if type(name) ~= "string" or name == "" then
+            error("invalid_relation_name")
+        end
+        if not self._relations[name] then
+            error("relation_not_found")
+        end
+        self._with[#self._with + 1] = name
+    end
+
     return self
 end
 
@@ -186,7 +245,13 @@ function Builder:all()
     if not result then
         return nil, db_err
     end
-    return result
+
+    local loaded, load_err = apply_eager_loading(self, result)
+    if not loaded then
+        return nil, load_err
+    end
+
+    return loaded
 end
 
 function Builder:first()
@@ -389,6 +454,8 @@ function M.new(model_definition, context)
         _table = model_definition.table_name,
         _select = { "*" },
         _where = {},
+        _with = {},
+        _relations = model_definition.relations or {},
         _order_by = nil,
         _limit = nil,
         _offset = nil,

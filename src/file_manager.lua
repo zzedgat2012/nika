@@ -5,6 +5,8 @@ local has_audit, audit = pcall(require, "nika_audit")
 
 local M = {}
 
+local request_index = {}
+
 local default_registry = file_storage.new_registry(file_storage.new_local({
     root_dir = "uploads"
 }))
@@ -35,7 +37,8 @@ end
 
 function M.process_files(files, opts)
     local safe_files = files or {}
-    local ok, err = file_validator.validate_payload(safe_files, opts)
+    local safe_opts = opts or {}
+    local ok, err = file_validator.validate_payload(safe_files, safe_opts)
     if not ok then
         log_security("file_upload_blocked", { reason = err })
         return nil, err
@@ -60,6 +63,14 @@ function M.process_files(files, opts)
         }
     end
 
+    if safe_opts.request_id ~= nil and safe_opts.request_id ~= "" then
+        local request_id = tostring(safe_opts.request_id)
+        request_index[request_id] = request_index[request_id] or {}
+        for i = 1, #stored do
+            request_index[request_id][#request_index[request_id] + 1] = stored[i].id
+        end
+    end
+
     return stored, nil
 end
 
@@ -72,6 +83,30 @@ function M.cleanup(files)
             default_registry:delete(id)
         end
     end
+    return true
+end
+
+function M.cleanup_request(request_id)
+    if request_id == nil or request_id == "" then
+        return true
+    end
+
+    local key = tostring(request_id)
+    local ids = request_index[key]
+    if type(ids) ~= "table" then
+        return true
+    end
+
+    for i = 1, #ids do
+        default_registry:delete(ids[i])
+    end
+
+    request_index[key] = nil
+    return true
+end
+
+function M.reset_request_index()
+    request_index = {}
     return true
 end
 

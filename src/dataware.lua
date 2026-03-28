@@ -64,6 +64,26 @@ local function build_model(def)
         return self
     end
 
+    function model:has_many(name, related_model, foreign_key, local_key)
+        if type(name) ~= "string" or name == "" then
+            error("relation name must be string")
+        end
+        if type(related_model) ~= "table" or type(related_model.find) ~= "function" then
+            error("related model must be a model")
+        end
+        if type(foreign_key) ~= "string" or foreign_key == "" then
+            error("foreign key must be string")
+        end
+
+        def.relations[name] = {
+            type = "has_many",
+            model = related_model,
+            foreign_key = foreign_key,
+            local_key = local_key or def.primary_key
+        }
+        return self
+    end
+
     function model:find(id, context)
         local qb = query_builder.new(def, context)
         if id ~= nil then
@@ -109,7 +129,8 @@ function M.model(name)
         schema = {},
         primary_key = "id",
         require_tenant = true,
-        tenant_field = "tenant_id"
+        tenant_field = "tenant_id",
+        relations = {}
     }
 
     local model = build_model(def)

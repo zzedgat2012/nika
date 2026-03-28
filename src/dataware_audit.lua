@@ -33,4 +33,12 @@ function M.log_delete(model_name, data, tenant_id)
     })
 end
 
+function M.log_tenant_violation(model_name, operation)
+    log_security("dataware_tenant_violation", {
+        model = model_name,
+        operation = operation or "query",
+        reason = "tenant_required"
+    })
+end
+
 return M
