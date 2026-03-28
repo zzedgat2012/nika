@@ -8,7 +8,12 @@ local SPEC_MODULES = {
     "tests.template_partials_spec",
     "tests.template_text_mode_spec",
     "tests.template_equivalence_spec",
-    "tests.template_pentest_final_spec"
+    "tests.template_pentest_final_spec",
+    -- Phase 10: Route/Middleware/Context
+    "tests.context_store_spec",
+    "tests.middleware_chain_spec",
+    "tests.router_v2_spec",
+    "tests.route_group_spec"
 }
 
 local function run_suite(suite)
