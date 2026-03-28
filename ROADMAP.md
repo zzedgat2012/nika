@@ -10,6 +10,7 @@ Construir um framework web Lua minimalista e auditável, mantendo sintaxe ASP em
 - ✅ Fases 6 a 10 concluídas (template engine + core routing/middleware).
 - ✅ Fase 11 (REST Dataware ORM + Auto-CRUD) concluída.
 - ✅ Fase 12 (File Uploads + Multipart Parsing) concluída.
+- ✅ Fase 13 (Error Handling + Route Grouping) concluída.
 
 ---
 
@@ -373,7 +374,7 @@ end)
 
 ---
 
-## Fase 13: Error Handling + Route Grouping (Semanas 7-8) — 🔄 Planned
+## Fase 13: Error Handling + Route Grouping (Semanas 7-8) — 🔄 In Progress
 
 **Objetivo:** Error handler centralizado, route grouping com middleware scope, versionamento API.
 
@@ -399,8 +400,8 @@ end)
 
 | Arquivo | Responsabilidade | Status |
 |---------|------------------|--------|
-| `src/error_handler.lua` | Centralizador com custom formatters (JSON, HTML, XML) | ⏳ |
-| `src/error_formatter.lua` | JSON, XML, HTML; stack trace only in dev | ⏳ |
+| `src/error_handler.lua` | Centralizador com custom formatters (JSON, HTML, XML) | 🔄 |
+| `src/error_formatter.lua` | JSON, XML, HTML; stack trace only in dev | 🔄 |
 
 ### Sintaxe Nova (Nika)
 
@@ -429,18 +430,18 @@ api_v2.get("/users/:id", get_user_v2_handler)
 
 ### Definition of Done
 
-- [ ] Error handler centralizado captura 4xx, 5xx
-- [ ] Custom formatters: JSON, HTML, XML
-- [ ] Stack trace hidden in prod; dev mostra completo
-- [ ] Route groups com prefix correto: `/api/v1/users/:id`
-- [ ] Middleware por grupo (não herda global)
-- [ ] Error handler responde com Content-Negotiation (Accept header)
-- [ ] Testes: `test_error_handler_spec.lua`, `test_route_group_spec.lua`
-- [ ] ISO 27001: Stack trace nunca exposto em produção
+- [x] Error handler centralizado captura 4xx, 5xx
+- [x] Custom formatters: JSON, HTML, XML
+- [x] Stack trace hidden in prod; dev mostra completo
+- [x] Route groups com prefix correto: `/api/v1/users/:id`
+- [x] Middleware por grupo (não herda global)
+- [x] Error handler responde com Content-Negotiation (Accept header)
+- [x] Testes: `test_error_handler_spec.lua`, `test_route_group_spec.lua`, `test_nika_middleware_error_flow_spec.lua`, `test_nika_stress_errors_spec.lua`
+- [x] ISO 27001: Stack trace nunca exposto em produção (validado em `history/PHASE13_ISO27001_VALIDATION.md`)
 
 ---
 
-## Fase 14: Validation + Binding + Security Middleware (Semanas 9-10) — 🔄 Planned
+## Fase 14: Validation + Binding + Security Middleware (Semanas 9-10) — 🔄 Next Priority
 
 **Objetivo:** Request validation, JSON/form binding, CORS/CSRF/rate-limit nativos.
 
