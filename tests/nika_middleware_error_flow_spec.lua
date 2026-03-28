@@ -131,7 +131,7 @@ describe("Nika middleware error flow (Phase 13 Block 3)", function()
 
     it("multiple middlewares: erro em qualquer uma é capturado", function()
         middleware_chain.use("before_request", function(req, res, ctx)
-            return false  -- OK
+            return false -- OK
         end, "first", 100)
 
         middleware_chain.use("before_request", function(req, res, ctx)
@@ -139,7 +139,7 @@ describe("Nika middleware error flow (Phase 13 Block 3)", function()
         end, "second", 50)
 
         middleware_chain.use("before_request", function(req, res, ctx)
-            return false  -- Never reaches
+            return false -- Never reaches
         end, "third", 25)
 
         local req = {}
@@ -156,7 +156,7 @@ describe("Nika middleware error flow (Phase 13 Block 3)", function()
     it("custom error handler pode processar middleware error", function()
         nika = require("nika")
         nika.reset_error_handler()
-        
+
         local custom_handler_called = false
         nika.set_error_handler(function(err, context)
             custom_handler_called = true
@@ -203,4 +203,3 @@ describe("Nika middleware error flow (Phase 13 Block 3)", function()
         assert(res.status >= 400, "status é error (>= 400)")
     end)
 end)
-

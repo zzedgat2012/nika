@@ -15,7 +15,7 @@ describe("Nika stress errors (Phase 13 Block 3)", function()
 
     it("error response com status 500 nao fica gigante", function()
         -- Cria middleware que simula erro com stack trace grande
-        local big_stack = string.rep("x", 10000)  -- 10KB stack trace
+        local big_stack = string.rep("x", 10000) -- 10KB stack trace
         nika.set_error_handler(function(err, context)
             return {
                 status = 500,
@@ -77,7 +77,7 @@ describe("Nika stress errors (Phase 13 Block 3)", function()
             headers = {
                 Accept = "application/json"
             },
-            upload_error = "payload_too_large"  -- Simula 100MB+ upload
+            upload_error = "payload_too_large" -- Simula 100MB+ upload
         }, {
             auto_register_default_hooks = false
         })
@@ -89,7 +89,7 @@ describe("Nika stress errors (Phase 13 Block 3)", function()
     end)
 
     it("xml formatter nao produz payload > 1MB", function()
-        local big_message = string.rep("error message ", 1000)  -- ~14KB mensagem
+        local big_message = string.rep("error message ", 1000) -- ~14KB mensagem
         nika.set_error_handler(function(err, context)
             return {
                 status = 500,
@@ -116,7 +116,7 @@ describe("Nika stress errors (Phase 13 Block 3)", function()
     end)
 
     it("html formatter escapa grandes payloads sem overflow", function()
-        local big_error = string.rep("<script>alert()</script>", 100)  -- ~2.4KB injection
+        local big_error = string.rep("<script>alert()</script>", 100) -- ~2.4KB injection
         nika.set_error_handler(function(err, context)
             return {
                 status = 500,
@@ -179,7 +179,7 @@ describe("Nika stress errors (Phase 13 Block 3)", function()
 
     it("request_id em context nao vaza em error response", function()
         local secret_request_id = "super-secret-request-id-12345"
-        
+
         local res = nika.handle_request({
             method = "GET",
             path = "/test",
@@ -199,12 +199,12 @@ describe("Nika stress errors (Phase 13 Block 3)", function()
     it("cleanup acontece mesmo com error response grande", function()
         -- Nota: Este teste valida que cleanup_uploads é chamado
         -- Mesmo que error response seja grande
-        
+
         local res = nika.handle_request({
             method = "POST",
             path = "/upload",
             headers = { Accept = "application/json" },
-            upload_error = "payload_too_large"  -- Simula erro
+            upload_error = "payload_too_large" -- Simula erro
         }, {
             auto_register_default_hooks = false
         })
