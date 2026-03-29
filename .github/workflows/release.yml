@@ -202,6 +202,7 @@ jobs:
               nika = "src/nika.lua",
               nika_io = "src/nika_io.lua",
               nika_audit = "src/nika_audit.lua",
+              json_util = "src/json_util.lua",
               router = "src/router.lua",
               parser = "src/parser.lua",
               sandbox = "src/sandbox.lua",
